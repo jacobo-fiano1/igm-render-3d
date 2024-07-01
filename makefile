@@ -1,7 +1,6 @@
-todo: test hellotriangle helloviewport adaptviewport movingtriangle \
-	spinningcube hellotexture hellotexture2 multitex multitex2
+todo: spinningcube
 
-LDLIBS=-lGL -lGLEW -lglfw -lm
+LDLIBS=-losg -losgViewer -losgDB -losgGA
 
 clean:
 	rm -f *.o *~
