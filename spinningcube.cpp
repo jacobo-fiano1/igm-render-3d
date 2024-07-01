@@ -9,7 +9,7 @@
 #include <osg/StateSet>
 #include <osgViewer/Viewer>
 
-// Función para crear una ruta de animación
+// Función para crear una ruta de animación de traslación
 osg::ref_ptr<osg::AnimationPath> createTranslationPath() {
     osg::ref_ptr<osg::AnimationPath> animationPath = new osg::AnimationPath();
     animationPath->setLoopMode(osg::AnimationPath::LOOP);
@@ -22,7 +22,6 @@ osg::ref_ptr<osg::AnimationPath> createTranslationPath() {
         double time = (double)i / (double)numSamples * animationDuration;
         double angle = time * osg::PI * 2.0 / animationDuration;
 
-        // Posición circular
         double x = radius * cos(angle);
         double y = radius * sin(angle);
         double z = radius * sin(angle);
@@ -47,7 +46,6 @@ osg::ref_ptr<osg::AnimationPath> createRotationPath() {
         double time = (double)i / (double)numSamples * animationDuration;
         double angle = time * osg::PI * 2.0;
 
-        // Rotación alrededor del eje Z
         osg::Quat rotation(angle, osg::Vec3(0.0, 1.0, 1.0));
         animationPath->insert(time, osg::AnimationPath::ControlPoint(osg::Vec3(), rotation));
     }
@@ -64,16 +62,16 @@ osg::ref_ptr<osg::Geode> createColoredCube() {
     osg::ref_ptr<osg::DrawElementsUInt> indices = new osg::DrawElementsUInt(GL_QUADS);
 
     // Definir los vértices del cubo
-    vertices->push_back(osg::Vec3(-0.5f, -0.5f, -0.5f)); // 0
-    vertices->push_back(osg::Vec3(0.5f, -0.5f, -0.5f));  // 1
-    vertices->push_back(osg::Vec3(0.5f, 0.5f, -0.5f));   // 2
-    vertices->push_back(osg::Vec3(-0.5f, 0.5f, -0.5f));  // 3
-    vertices->push_back(osg::Vec3(-0.5f, -0.5f, 0.5f));  // 4
-    vertices->push_back(osg::Vec3(0.5f, -0.5f, 0.5f));   // 5
-    vertices->push_back(osg::Vec3(0.5f, 0.5f, 0.5f));    // 6
-    vertices->push_back(osg::Vec3(-0.5f, 0.5f, 0.5f));   // 7
+    vertices->push_back(osg::Vec3(-0.5f, -0.5f, -0.5f));
+    vertices->push_back(osg::Vec3(0.5f, -0.5f, -0.5f));
+    vertices->push_back(osg::Vec3(0.5f, 0.5f, -0.5f));
+    vertices->push_back(osg::Vec3(-0.5f, 0.5f, -0.5f));
+    vertices->push_back(osg::Vec3(-0.5f, -0.5f, 0.5f));
+    vertices->push_back(osg::Vec3(0.5f, -0.5f, 0.5f));
+    vertices->push_back(osg::Vec3(0.5f, 0.5f, 0.5f));
+    vertices->push_back(osg::Vec3(-0.5f, 0.5f, 0.5f));
 
-    // Definir los colores para cada vértice (para crear un gradiente)
+    // Definir los colores para cada vértice
     colors->push_back(osg::Vec4(1.0f, 0.0f, 0.0f, 1.0f)); // Rojo
     colors->push_back(osg::Vec4(0.0f, 1.0f, 0.0f, 1.0f)); // Verde
     colors->push_back(osg::Vec4(0.0f, 0.0f, 1.0f, 1.0f)); // Azul
@@ -83,18 +81,11 @@ osg::ref_ptr<osg::Geode> createColoredCube() {
     colors->push_back(osg::Vec4(1.0f, 0.5f, 0.0f, 1.0f)); // Naranja
     colors->push_back(osg::Vec4(0.5f, 0.0f, 0.5f, 1.0f)); // Púrpura
 
-    // Definir los índices para las caras del cubo
-    // Cara frontal
     indices->push_back(4); indices->push_back(5); indices->push_back(6); indices->push_back(7);
-    // Cara trasera
     indices->push_back(0); indices->push_back(1); indices->push_back(2); indices->push_back(3);
-    // Cara izquierda
     indices->push_back(0); indices->push_back(4); indices->push_back(7); indices->push_back(3);
-    // Cara derecha
     indices->push_back(1); indices->push_back(5); indices->push_back(6); indices->push_back(2);
-    // Cara superior
     indices->push_back(3); indices->push_back(2); indices->push_back(6); indices->push_back(7);
-    // Cara inferior
     indices->push_back(0); indices->push_back(1); indices->push_back(5); indices->push_back(4);
 
     geometry->setVertexArray(vertices);
@@ -122,7 +113,7 @@ int main(int argc, char** argv) {
     // Crear un nodo transformador para animar el cubo y alejarlo
     osg::ref_ptr<osg::PositionAttitudeTransform> translationNode = new osg::PositionAttitudeTransform();
     translationNode->setPosition(osg::Vec3(0, -4, 0)); // Alejar el cubo 
-    translationNode->addChild(rotationNode);  // Añadir el nodo de rotación al nodo de traslación
+    translationNode->addChild(rotationNode);
 
     // Crear la ruta de animación de traslación y agregarla al nodo de transformación
     osg::ref_ptr<osg::AnimationPathCallback> translationCallback = new osg::AnimationPathCallback();
@@ -155,7 +146,7 @@ int main(int argc, char** argv) {
     lightSS->setMode(GL_LIGHTING, osg::StateAttribute::ON);
 
 
-// Crear un nodo raíz y agregar ambos grupos a él
+    // Crear un nodo raíz y agregar ambos grupos a él
     osg::ref_ptr<osg::Group> root = new osg::Group();
     root->addChild(cubeGroup);
     root->addChild(lightGroup);
