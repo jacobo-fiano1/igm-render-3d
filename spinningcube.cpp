@@ -15,10 +15,6 @@
 #include <glm/gtc/matrix_transform.hpp> // glm::translate, glm::rotate, glm::perspective
 #include <glm/gtc/type_ptr.hpp>
 
-// stb_image for texture loading
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
 int gl_width = 640;
 int gl_height = 480;
 
@@ -28,10 +24,7 @@ void render(double);
 
 GLuint shader_program = 0; // shader program to set render pipeline
 GLuint vao = 0; // Vertext Array Object to set input data
-GLuint texture = 0; // Texture ID
-GLint mv_location, proj_location, texture_location; // Uniforms for transformation matrices and texture
-
-GLuint loadTexture(const char* filename);
+GLint mv_location, proj_location; // Uniforms for transformation matrices
 
 int main() {
   // start GL context and O/S window using the GLFW helper library
@@ -39,6 +32,11 @@ int main() {
     fprintf(stderr, "ERROR: could not start GLFW3\n");
     return 1;
   }
+
+  //  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  //  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  //  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+  //  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
   GLFWwindow* window = glfwCreateWindow(gl_width, gl_height, "My spinning cube", NULL, NULL);
   if (!window) {
@@ -49,6 +47,8 @@ int main() {
   glfwSetWindowSizeCallback(window, glfw_window_size_callback);
   glfwMakeContextCurrent(window);
 
+  // start GLEW extension handler
+  // glewExperimental = GL_TRUE;
   glewInit();
 
   // get version info
@@ -62,6 +62,7 @@ int main() {
   printf("GLSL version supported %s\n", glslversion);
   printf("Starting viewport: (width: %d, height: %d)\n", gl_width, gl_height);
 
+  // Enable Depth test: only draw onto a pixel if fragment closer to viewer
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS); // set a smaller value as "closer"
 
@@ -70,9 +71,7 @@ int main() {
     "#version 130\n"
 
     "in vec4 v_pos;"
-    "in vec2 v_tex_coord;"
 
-    "out vec2 vs_tex_coord;"
     "out vec4 vs_color;"
 
     "uniform mat4 mv_matrix;"
@@ -81,29 +80,21 @@ int main() {
     "void main() {"
     "  gl_Position = proj_matrix * mv_matrix * v_pos;"
     "  vs_color = v_pos * 2.0 + vec4(0.4, 0.4, 0.4, 0.0);"
-    "  vs_tex_coord = v_tex_coord;"
     "}";
-
 
   // Fragment Shader
   const char* fragment_shader =
     "#version 130\n"
 
-    "in vec4 vs_color;"
-    "in vec2 vs_tex_coord;"
-
     "out vec4 frag_col;"
 
-    "uniform sampler2D texture;"
+    "in vec4 vs_color;"
 
     "void main() {"
-    "  if (vs_tex_coord.x == 0.0 && vs_tex_coord.y == 0.0) {"
-    "    frag_col = vs_color;"
-    "  } else {"
-    "    frag_col = texture2D(texture, vs_tex_coord);"
-    "  }"
+    "  frag_col = vs_color;"
     "}";
 
+  // Shaders compilation
   GLuint vs = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(vs, 1, &vertex_shader, NULL);
   glCompileShader(vs);
@@ -111,63 +102,80 @@ int main() {
   glShaderSource(fs, 1, &fragment_shader, NULL);
   glCompileShader(fs);
 
+  // Create program, attach shaders to it and link it
   shader_program = glCreateProgram();
   glAttachShader(shader_program, fs);
   glAttachShader(shader_program, vs);
   glLinkProgram(shader_program);
 
+  // Release shader objects
   glDeleteShader(vs);
   glDeleteShader(fs);
 
+  // Vertex Array Object
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
 
-  // Cube vertices with texture coordinates
+  // Cube to be rendered
+  //
+  //          0        3
+  //       7        4 <-- top-right-near
+  // bottom
+  // left
+  // far ---> 1        2
+  //       6        5
+  //
   const GLfloat vertex_positions[] = {
-    // Positions         // Texture Coords
-    -0.25f, -0.25f, -0.25f,  0.0f, 0.0f,
-    -0.25f,  0.25f, -0.25f,  0.0f, 0.0f,
-     0.25f, -0.25f, -0.25f,  0.0f, 0.0f,
-     0.25f,  0.25f, -0.25f,  0.0f, 0.0f,
-     0.25f, -0.25f, -0.25f,  0.0f, 0.0f,
-    -0.25f,  0.25f, -0.25f,  0.0f, 0.0f,
+    -0.25f, -0.25f, -0.25f, // 1
+    -0.25f,  0.25f, -0.25f, // 0
+     0.25f, -0.25f, -0.25f, // 2
 
-     0.25f, -0.25f, -0.25f,  0.0f, 0.0f,
-     0.25f,  0.25f, -0.25f,  0.0f, 0.0f,
-     0.25f, -0.25f,  0.25f,  0.0f, 0.0f,
-     0.25f,  0.25f,  0.25f,  0.0f, 0.0f,
-     0.25f, -0.25f,  0.25f,  0.0f, 0.0f,
-     0.25f,  0.25f, -0.25f,  0.0f, 0.0f,
+     0.25f,  0.25f, -0.25f, // 3
+     0.25f, -0.25f, -0.25f, // 2
+    -0.25f,  0.25f, -0.25f, // 0
 
-     0.25f, -0.25f,  0.25f,  0.0f, 0.0f,
-     0.25f,  0.25f,  0.25f,  0.0f, 0.0f,
-    -0.25f, -0.25f,  0.25f,  0.0f, 0.0f,
-    -0.25f,  0.25f,  0.25f,  0.0f, 0.0f,
-    -0.25f, -0.25f,  0.25f,  0.0f, 0.0f,
-     0.25f,  0.25f,  0.25f,  0.0f, 0.0f,
+     0.25f, -0.25f, -0.25f, // 2
+     0.25f,  0.25f, -0.25f, // 3
+     0.25f, -0.25f,  0.25f, // 5
 
-    -0.25f, -0.25f,  0.25f,  0.0f, 0.0f,
-    -0.25f,  0.25f,  0.25f,  0.0f, 1.0f,
-    -0.25f, -0.25f, -0.25f,  1.0f, 0.0f,
-    -0.25f,  0.25f, -0.25f,  1.0f, 1.0f,
-    -0.25f, -0.25f, -0.25f,  1.0f, 0.0f,
-    -0.25f,  0.25f,  0.25f,  0.0f, 1.0f,
+     0.25f,  0.25f,  0.25f, // 4
+     0.25f, -0.25f,  0.25f, // 5
+     0.25f,  0.25f, -0.25f, // 3
 
-     0.25f, -0.25f, -0.25f,  0.0f, 0.0f,
-     0.25f, -0.25f,  0.25f,  0.0f, 0.0f,
-    -0.25f, -0.25f, -0.25f,  0.0f, 0.0f,
-    -0.25f, -0.25f,  0.25f,  0.0f, 0.0f,
-    -0.25f, -0.25f, -0.25f,  0.0f, 0.0f,
-     0.25f, -0.25f,  0.25f,  0.0f, 0.0f,
+     0.25f, -0.25f,  0.25f, // 5
+     0.25f,  0.25f,  0.25f, // 4
+    -0.25f, -0.25f,  0.25f, // 6
 
-     0.25f,  0.25f,  0.25f,  0.0f, 0.0f,
-     0.25f,  0.25f, -0.25f,  0.0f, 0.0f,
-    -0.25f,  0.25f,  0.25f,  0.0f, 0.0f,
-    -0.25f,  0.25f, -0.25f,  0.0f, 0.0f,
-    -0.25f,  0.25f,  0.25f,  0.0f, 0.0f,
-     0.25f,  0.25f, -0.25f,  0.0f, 0.0f
+    -0.25f,  0.25f,  0.25f, // 7
+    -0.25f, -0.25f,  0.25f, // 6
+     0.25f,  0.25f,  0.25f, // 4
+
+    -0.25f, -0.25f,  0.25f, // 6
+    -0.25f,  0.25f,  0.25f, // 7
+    -0.25f, -0.25f, -0.25f, // 1
+
+    -0.25f,  0.25f, -0.25f, // 0
+    -0.25f, -0.25f, -0.25f, // 1
+    -0.25f,  0.25f,  0.25f, // 7
+
+     0.25f, -0.25f, -0.25f, // 2
+     0.25f, -0.25f,  0.25f, // 5
+    -0.25f, -0.25f, -0.25f, // 1
+
+    -0.25f, -0.25f,  0.25f, // 6
+    -0.25f, -0.25f, -0.25f, // 1
+     0.25f, -0.25f,  0.25f, // 5
+
+     0.25f,  0.25f,  0.25f, // 4
+     0.25f,  0.25f, -0.25f, // 3
+    -0.25f,  0.25f,  0.25f, // 7
+
+    -0.25f,  0.25f, -0.25f, // 0
+    -0.25f,  0.25f,  0.25f, // 7
+     0.25f,  0.25f, -0.25f  // 3
   };
 
+  // Vertex Buffer Object (for vertex coordinates)
   GLuint vbo = 0;
   glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -175,55 +183,36 @@ int main() {
 
   // Vertex attributes
   // 0: vertex position (x, y, z)
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
   glEnableVertexAttribArray(0);
 
-  // 1: texture coordinates (u, v)
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
-  glEnableVertexAttribArray(1);
-
+  // Unbind vbo (it was conveniently registered by VertexAttribPointer)
   glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  // Unbind vao
   glBindVertexArray(0);
 
+  // Uniforms
+  // - Model-View matrix
+  // - Projection matrix
   mv_location = glGetUniformLocation(shader_program, "mv_matrix");
   proj_location = glGetUniformLocation(shader_program, "proj_matrix");
-  texture_location = glGetUniformLocation(shader_program, "texture");
 
-  // Load texture
-  texture = loadTexture("texture.jpg");
-
+  // Render loop
   while(!glfwWindowShouldClose(window)) {
+
     processInput(window);
+
     render(glfwGetTime());
+
     glfwSwapBuffers(window);
+
     glfwPollEvents();
   }
 
   glfwTerminate();
+
   return 0;
-}
-
-GLuint loadTexture(const char* filename) {
-  int width, height, nrChannels;
-  unsigned char *data = stbi_load(filename, &width, &height, &nrChannels, 0);
-  if (!data) {
-    fprintf(stderr, "Failed to load texture\n");
-    return 0;
-  }
-
-  GLuint texture;
-  glGenTextures(1, &texture);
-  glBindTexture(GL_TEXTURE_2D, texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-  glGenerateMipmap(GL_TEXTURE_2D);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-  stbi_image_free(data);
-  return texture;
 }
 
 void render(double currentTime) {
@@ -258,10 +247,6 @@ void render(double currentTime) {
                                  0.1f, 1000.0f);
   glUniformMatrix4fv(proj_location, 1, GL_FALSE, glm::value_ptr(proj_matrix));
 
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, texture);
-  glUniform1i(texture_location, 0);
-
   glDrawArrays(GL_TRIANGLES, 0, 36);
 }
 
@@ -270,6 +255,7 @@ void processInput(GLFWwindow *window) {
     glfwSetWindowShouldClose(window, 1);
 }
 
+// Callback function to track window size and update viewport
 void glfw_window_size_callback(GLFWwindow* window, int width, int height) {
   gl_width = width;
   gl_height = height;
