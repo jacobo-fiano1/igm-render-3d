@@ -57,9 +57,20 @@ int main(int argc, char* argv[]) {
   osg::ref_ptr<osg::AnimationPathCallback> rotationCallback = new osg::AnimationPathCallback();
   rotationCallback->setAnimationPath(createRotationPath());
   rotationNode->setUpdateCallback(rotationCallback);
+
+  // Crear pat para el primer cubo
+  osg::ref_ptr<osg::PositionAttitudeTransform> cube1 = new osg::PositionAttitudeTransform();
+  cube1->addChild(rotationNode);
+  cube1->setPosition(osg::Vec3(-2.0, 0.0, 0.0));
+
+  // Crear para para el segundo cubo
+  osg::ref_ptr<osg::PositionAttitudeTransform> cube2 = new osg::PositionAttitudeTransform();
+  cube2->addChild(rotationNode);
+  cube2->setPosition(osg::Vec3(2.0, 0.0, 0.0));
       
-  // Agregar el nodo con el cubo al nodo raíz
-  root->addChild(rotationNode);
+  // Agregar los nodos con los cubos al nodo raíz
+  root->addChild(cube1);
+  root->addChild(cube2);
 
   // Crear un visor y establecer la escena
   osgViewer::Viewer viewer;
