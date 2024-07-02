@@ -11,6 +11,9 @@
 #include <osg/StateSet>
 #include <osgGA/TrackballManipulator>
 #include <osgViewer/Viewer>
+#include <osg/Texture2D>
+#include <osg/TexGen>
+
 
 // Función para crear una ruta de animación de rotación
 osg::ref_ptr<osg::AnimationPath> createRotationPath() {
@@ -47,6 +50,14 @@ int main(int argc, char* argv[]) {
     exit(1);
   }
 
+  // Añadir textura 
+  osg::ref_ptr<osg::StateSet> ss = loadedModel->getOrCreateStateSet();
+
+  osg::ref_ptr<osg::Image> image = osgDB::readImageFile("texture.png"); 
+  osg::ref_ptr<osg::Texture2D> tex(new osg::Texture2D());               
+  tex->setImage(image);                                                 
+  ss->setTextureAttributeAndModes(0, tex);                              
+
   // Crear el nodo raíz
   osg::ref_ptr<osg::Group> root(new osg::Group());
 
@@ -72,6 +83,8 @@ int main(int argc, char* argv[]) {
   osg::ref_ptr<osg::PositionAttitudeTransform> lightPAT(new osg::PositionAttitudeTransform());
   lightPAT->setPosition(osg::Vec3(5.0, 12.0, 3.0));
   lightPAT->setScale(osg::Vec3(0.1, 0.1, 0.1));
+
+  // Agregar luz al nodo raíz
   root->addChild(lightPAT);
 
   // Setup GL_LIGHT1. Leave GL_LIGHT0 as it is by default (enabled)
@@ -83,7 +96,6 @@ int main(int argc, char* argv[]) {
 
   lightPAT->addChild(lightSource);
 
-  osg::ref_ptr<osg::StateSet> ss = root->getOrCreateStateSet();
   ss->setMode(GL_LIGHT1, osg::StateAttribute::ON);
       
   // Agregar los nodos con los cubos al nodo raíz
