@@ -67,6 +67,24 @@ int main(int argc, char* argv[]) {
   osg::ref_ptr<osg::PositionAttitudeTransform> cube2 = new osg::PositionAttitudeTransform();
   cube2->addChild(rotationNode);
   cube2->setPosition(osg::Vec3(2.0, 0.0, 0.0));
+
+  // Añadir nueva fuente de luz
+  osg::ref_ptr<osg::PositionAttitudeTransform> lightPAT(new osg::PositionAttitudeTransform());
+  lightPAT->setPosition(osg::Vec3(5.0, 12.0, 3.0));
+  lightPAT->setScale(osg::Vec3(0.1, 0.1, 0.1));
+  root->addChild(lightPAT);
+
+  // Setup GL_LIGHT1. Leave GL_LIGHT0 as it is by default (enabled)
+  osg::ref_ptr<osg::LightSource> lightSource(new osg::LightSource());
+  lightSource->addChild(loadedModel);
+  lightSource->getLight()->setLightNum(1);
+  lightSource->getLight()->setPosition(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+  lightSource->getLight()->setDiffuse(osg::Vec4(1.0, 1.0, 0.0, 1.0));
+
+  lightPAT->addChild(lightSource);
+
+  osg::ref_ptr<osg::StateSet> ss = root->getOrCreateStateSet();
+  ss->setMode(GL_LIGHT1, osg::StateAttribute::ON);
       
   // Agregar los nodos con los cubos al nodo raíz
   root->addChild(cube1);
