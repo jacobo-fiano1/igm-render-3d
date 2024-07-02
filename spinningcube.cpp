@@ -1,3 +1,5 @@
+#include <iostream>
+#include <osgDB/ReadFile>
 #include <osg/ShapeDrawable>
 #include <osg/Geode>
 #include <osg/Group>
@@ -12,103 +14,61 @@
 
 // Función para crear una ruta de animación de rotación
 osg::ref_ptr<osg::AnimationPath> createRotationPath() {
-    osg::ref_ptr<osg::AnimationPath> animationPath = new osg::AnimationPath();
-    animationPath->setLoopMode(osg::AnimationPath::LOOP);
+  osg::ref_ptr<osg::AnimationPath> animationPath = new osg::AnimationPath();
+  animationPath->setLoopMode(osg::AnimationPath::LOOP);
 
-    const double degreesPerSecond = 40.0; // Grados por segundo
-    const double sampleInterval = 1.0; // Intervalo de muestreo en segundos
-    const unsigned int numSamples = 40;   // Número de muestras de la animación
+  const double degreesPerSecond = 40.0; // Grados por segundo
+  const double sampleInterval = 1.0; // Intervalo de muestreo en segundos
+  const unsigned int numSamples = 40;   // Número de muestras de la animación
 
-    for (unsigned int i = 0; i <= numSamples; ++i) {
-        double time = i * sampleInterval;
-        double angle = osg::DegreesToRadians(degreesPerSecond * time);
+  for (unsigned int i = 0; i <= numSamples; ++i) {
+      double time = i * sampleInterval;
+      double angle = osg::DegreesToRadians(degreesPerSecond * time);
 
-        osg::Quat rotation(angle, osg::Vec3(0.0, 1.0, 1.0));
-        animationPath->insert(time, osg::AnimationPath::ControlPoint(osg::Vec3(), rotation));
-    }
+      osg::Quat rotation(angle, osg::Vec3(0.0, 1.0, 1.0));
+      animationPath->insert(time, osg::AnimationPath::ControlPoint(osg::Vec3(), rotation));
+  }
 
-    return animationPath;
+  return animationPath;
 }
 
-osg::ref_ptr<osg::Geode> createColoredCube() {
-    osg::ref_ptr<osg::Geode> geode = new osg::Geode();
-    osg::ref_ptr<osg::Geometry> geometry = new osg::Geometry();
+int main(int argc, char* argv[]) {
+  
+  // Comprobar parámetros de línea de comandos
+  if (argc != 2) {
+    std::cerr << "Usage: " << argv[0] << " <model file>\n";
+    exit(1);
+  }
 
-    osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array();
-    osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array();
-    osg::ref_ptr<osg::DrawElementsUInt> indices = new osg::DrawElementsUInt(GL_QUADS);
+  // Cargar el modelo
+  osg::ref_ptr<osg::Node> loadedModel = osgDB::readNodeFile(argv[1]);
+  if (!loadedModel) {
+    std::cerr << "Problem opening '" << argv[1] << "'\n";
+    exit(1);
+  }
 
-    // Definir los vértices del cubo
-    vertices->push_back(osg::Vec3(-0.5f, -0.5f, -0.5f));
-    vertices->push_back(osg::Vec3(0.5f, -0.5f, -0.5f));
-    vertices->push_back(osg::Vec3(0.5f, 0.5f, -0.5f));
-    vertices->push_back(osg::Vec3(-0.5f, 0.5f, -0.5f));
-    vertices->push_back(osg::Vec3(-0.5f, -0.5f, 0.5f));
-    vertices->push_back(osg::Vec3(0.5f, -0.5f, 0.5f));
-    vertices->push_back(osg::Vec3(0.5f, 0.5f, 0.5f));
-    vertices->push_back(osg::Vec3(-0.5f, 0.5f, 0.5f));
+  // Crear el nodo raíz
+  osg::ref_ptr<osg::Group> root(new osg::Group());
 
-    // Definir los colores para cada vértice
-    colors->push_back(osg::Vec4(1.0f, 0.0f, 0.0f, 1.0f)); // Rojo
-    colors->push_back(osg::Vec4(0.0f, 1.0f, 0.0f, 1.0f)); // Verde
-    colors->push_back(osg::Vec4(0.0f, 0.0f, 1.0f, 1.0f)); // Azul
-    colors->push_back(osg::Vec4(1.0f, 1.0f, 0.0f, 1.0f)); // Amarillo
-    colors->push_back(osg::Vec4(1.0f, 0.0f, 1.0f, 1.0f)); // Magenta
-    colors->push_back(osg::Vec4(0.0f, 1.0f, 1.0f, 1.0f)); // Cian
-    colors->push_back(osg::Vec4(1.0f, 0.5f, 0.0f, 1.0f)); // Naranja
-    colors->push_back(osg::Vec4(0.5f, 0.0f, 0.5f, 1.0f)); // Púrpura
+  // Crear un nodo de transformación para la rotación del cubo
+  osg::ref_ptr<osg::PositionAttitudeTransform> rotationNode = new osg::PositionAttitudeTransform();
+  rotationNode->addChild(loadedModel);
+  // Crear la ruta de animación de rotación y agregarla al nodo de rotación
+  osg::ref_ptr<osg::AnimationPathCallback> rotationCallback = new osg::AnimationPathCallback();
+  rotationCallback->setAnimationPath(createRotationPath());
+  rotationNode->setUpdateCallback(rotationCallback);
+      
+  // Agregar el nodo con el cubo al nodo raíz
+  root->addChild(rotationNode);
 
-    indices->push_back(4); indices->push_back(5); indices->push_back(6); indices->push_back(7);
-    indices->push_back(0); indices->push_back(1); indices->push_back(2); indices->push_back(3);
-    indices->push_back(0); indices->push_back(4); indices->push_back(7); indices->push_back(3);
-    indices->push_back(1); indices->push_back(5); indices->push_back(6); indices->push_back(2);
-    indices->push_back(3); indices->push_back(2); indices->push_back(6); indices->push_back(7);
-    indices->push_back(0); indices->push_back(1); indices->push_back(5); indices->push_back(4);
+  // Crear un visor y establecer la escena
+  osgViewer::Viewer viewer;
+  viewer.setSceneData(root);
 
-    geometry->setVertexArray(vertices);
-    geometry->setColorArray(colors, osg::Array::BIND_PER_VERTEX);
-    geometry->addPrimitiveSet(indices);
+  // Configurar el manipulador de cámara para permitir la interacción con el ratón
+  osg::ref_ptr<osgGA::TrackballManipulator> manipulator = new osgGA::TrackballManipulator();
+  viewer.setCameraManipulator(new osgGA::TrackballManipulator);
 
-    geode->addDrawable(geometry);
-    return geode;
-}
-
-
-int main(int argc, char** argv) {
-    // Crear el Geode del cubo coloreado
-    osg::ref_ptr<osg::Geode> cuboGeode = createColoredCube();
-
-    // Crear un nodo de transformación para la rotación del cubo
-    osg::ref_ptr<osg::PositionAttitudeTransform> rotationNode = new osg::PositionAttitudeTransform();
-    rotationNode->addChild(cuboGeode);
-    // Crear la ruta de animación de rotación y agregarla al nodo de rotación
-    osg::ref_ptr<osg::AnimationPathCallback> rotationCallback = new osg::AnimationPathCallback();
-    rotationCallback->setAnimationPath(createRotationPath());
-    rotationNode->setUpdateCallback(rotationCallback);
-
-    //Crear pat para el primer cubo
-    osg::ref_ptr<osg::PositionAttitudeTransform> cube1 = new osg::PositionAttitudeTransform();
-    cube1->addChild(rotationNode);
-    cube1->setPosition(osg::Vec3(-2.0, 0.0, 0.0));
-
-    //Crear para para el segundo cubo
-    osg::ref_ptr<osg::PositionAttitudeTransform> cube2 = new osg::PositionAttitudeTransform();
-    cube2->addChild(rotationNode);
-    cube2->setPosition(osg::Vec3(2.0, 0.0, 0.0));
-        
-    // Crear un nodo raíz y agregar los nodos con los cubos a él
-    osg::ref_ptr<osg::Group> root = new osg::Group();
-    root->addChild(cube1);
-    root->addChild(cube2);
-
-    // Crear un visor y establecer la escena
-    osgViewer::Viewer viewer;
-    viewer.setSceneData(root);
-
-    // Configurar el manipulador de cámara para permitir la interacción con el ratón
-    osg::ref_ptr<osgGA::TrackballManipulator> manipulator = new osgGA::TrackballManipulator();
-    viewer.setCameraManipulator(new osgGA::TrackballManipulator);
-
-    // Iniciar el bucle de visualización
-    return viewer.run();
+  // Iniciar el bucle de visualización
+  return viewer.run();
 }
