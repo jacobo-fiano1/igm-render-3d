@@ -1,1 +1,0 @@
-# igm-render-3d
